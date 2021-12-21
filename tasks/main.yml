@@ -1,0 +1,165 @@
+---
+- name: set apache version
+  set_fact:
+    apache_version: "httpd-{{ apache_version }}"
+
+- name: check whatprovides httpd
+  shell: yum whatprovides httpd
+  changed_when: false
+  register: apache_version_check
+  args:
+    warn: false
+
+- fail:
+    msg: "httpd-{{ apache_version }} is not available, please check"
+  when: apache_version not in apache_version_check.stdout
+
+- name: ensure apache packages are installed
+  yum:
+    name: "{{ apache_packages }}"
+    state: present
+
+- name: ensure welcome page is commented
+  template:
+    src: "welcome.conf.j2"
+    dest: "{{ apache_conf_path }}/welcome.conf"
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: symlink mime.types file
+  file:
+    state: link
+    src: /etc/mime.types
+    dest: /etc/httpd/conf/mime.types
+
+- name: set ssl config
+  template:
+    src: ssl.conf.j2
+    dest: "{{ apache_conf_path }}/ssl.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  when: apache_config_ssl
+  register: apache_set_ssl
+
+- name: disable SSL listen in config if set
+  lineinfile:
+    dest: "{{ apache_conf_path }}/ssl.conf"
+    regexp: "^Listen (.*)"
+    line: "#Listen \\1"
+    backrefs: true
+    state: present
+  when: not apache_config_ssl
+  register: apache_disablessl
+
+- name: set apache default config
+  template:
+    src: httpd.conf.j2
+    dest: "{{ apache_server_root }}/conf/httpd.conf"
+    mode: '0644'
+  register: apache_set_config
+
+- name: check whether certificates defined in vhosts exist
+  stat:
+    path: "{{ item.certificate_file }}"
+  register: apache_ssl_certificates
+  loop: "{{ apache_vhosts_ssl }}"
+
+- name: configure apache vhosts
+  template:
+    src: vhosts.conf.j2
+    dest: "{{ apache_conf_path }}/vhosts.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  register: apache_set_vhosts
+
+- block:
+
+    - name: set fact for php v73 or greater
+      set_fact:
+        php_pkg_prefix: "php{{ php_version }}"
+      when: php_version >= 73
+
+    - name: set fact for php v72 or lower
+      set_fact:
+        php_pkg_prefix: "php{{ php_version }}u"
+      when: php_version <= 72
+
+    - name: ensure php_mod is installed
+      yum:
+        name: "mod_{{ php_pkg_prefix }}"
+
+  when: apache_php_mod_enabled
+
+- name: find the modules config files
+  find:
+    path: "{{ apache_modules_path }}"
+    patterns: "^.*?\\.conf$"
+    use_regex: true
+  register: get_module_cfg_files
+  changed_when: false
+
+- name: set fact for multiple vars
+  set_fact:
+    module_cfg_files:
+      "{{ get_module_cfg_files.files | map(attribute='path') | list }}"
+    modules_ssl_conf: "{{ apache_modules_path }}00-ssl.conf"
+    modules_ssl_ansible_conf: "{{ apache_modules_path }}00-ansible_managed.conf"
+
+- name: ensure configured modules are managed by ansible
+  template:
+    src: mods_disabled.conf.j2
+    dest: "{{ item }}"
+  with_items:
+    - "{{ module_cfg_files }}"
+  when:
+    - item != modules_ssl_conf
+    - item != modules_ssl_ansible_conf
+  register: apache_disable_modules
+
+- name: ensure modules are set
+  template:
+    src: mods_enabled.conf.j2
+    dest: "{{ apache_modules_path }}00-ansible_managed.conf"
+  register: apache_set_modules
+
+- name: config check when a config changed
+  shell: httpd -t
+  ignore_errors: true
+  register: apache_config_check
+  when: >
+    apache_set_config.changed or
+    apache_set_modules.changed or
+    apache_disable_modules.changed or
+    apache_set_vhosts.changed
+
+- name: fail if configtest failed
+  fail:
+    msg: "{{ apache_config_check.stderr_lines }}"
+  when:
+    - apache_config_check.failed is defined
+    - apache_config_check.failed
+
+# it's weird, but the output is placed in stderr, instead of stdout
+- name: reload apache on config change and successful configtest
+  service:
+    name: httpd
+    state: reloaded
+  when: >
+    apache_config_check.changed and 'Syntax OK' in apache_config_check.stderr
+
+- name: set logrotate script
+  template:
+    src: logrotate.j2
+    dest: /etc/logrotate.d/httpd
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: ensure apache is started and enabled
+  service:
+    name: httpd
+    state: started
+    enabled: true

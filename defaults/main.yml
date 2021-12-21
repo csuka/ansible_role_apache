@@ -1,0 +1,110 @@
+---
+# see readme when changing version
+apache_version: 2.4
+apache_packages:
+  - httpd
+  - httpd-devel
+  - mod_ssl
+
+apache_user: apache
+apache_group: apache
+apache_serveradmin: root@localhost
+apache_servername: "{{ inventory_hostname }}"
+
+apache_service: httpd
+apache_daemon: httpd
+apache_daemon_path: /usr/sbin/
+apache_server_root: /etc/httpd
+apache_conf_path: "{{ apache_server_root }}/conf.d/"
+apache_modules_path: "{{ apache_server_root}}/conf.modules.d/"
+
+apache_listen_ip: "*"
+apache_listen_port: 80
+apache_listen_port_ssl: 443
+
+apache_config_ssl: true
+apache_ignore_missing_ssl_certificate: true
+
+apache_php_mod_enabled: false
+php_version: 74
+
+apache_global_vhost_settings: |
+  DirectoryIndex index.php index.html
+
+apache_additional_config_settings: |
+  # Blank by design
+
+# see readme for examples
+apache_vhosts: []
+apache_vhosts_ssl: []
+
+apache_allow_override: "All"
+apache_options: "-Indexes +FollowSymLinks"
+
+apache_ssl_protocol: "All -SSLv2 -SSLv3"
+apache_ssl_cipher_suite: |
+  ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:
+  ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:
+  DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:
+  ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:
+  ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:
+  ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:
+  DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:
+  DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:
+  AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:
+  AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:
+  !PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA
+
+apache_mods_disabled: []
+
+apache_default_modules:
+  - actions
+  - alias
+  - authz_core
+  - authz_host
+  - autoindex
+  - asis
+  - cgi
+  - deflate
+  - dir
+  - echo
+  - env
+  - expires
+  - headers
+  - include
+  - log_config
+  - mime
+  - mime_magic
+  - mpm_prefork
+  - proxy
+  - proxy_ajp
+  - proxy_connect
+  - proxy_http
+  - proxy_fcgi
+  - reqtimeout
+  - rewrite
+  - setenvif
+  - status
+  - socache_shmcb
+  - suexec
+  - systemd
+  - unixd
+  - version
+  - vhost_alias
+
+apache_additional_modules: []
+apache_mods_configured:
+  "{{ apache_default_modules }} + {{ apache_additional_modules }}"
+
+apache_load_modules: []
+
+apache_logrotate: |
+  daily
+  missingok
+  notifempty
+  rotate 14
+  sharedscripts
+  delaycompress
+  postrotate
+      /bin/systemctl reload httpd.service > /dev/null 2>/dev/null || true
+  endscript

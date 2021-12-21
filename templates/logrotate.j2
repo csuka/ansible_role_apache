@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+/var/log/httpd/*log {
+
+  {{ apache_logrotate | replace('\n', '\n  ') }}
+}

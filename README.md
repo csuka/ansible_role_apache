@@ -1,6 +1,6 @@
-# Apache 2.4
+# Apache
 
-An Ansible Role that installs Apache 2.4 on EL 8.
+An Ansible role that installs, configures and manages Apache for EL 8.
 
 ## Good 2 know
 

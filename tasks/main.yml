@@ -15,7 +15,7 @@
   when: apache_version not in apache_version_check.stdout
 
 - name: ensure apache packages are installed
-  yum:
+  dnf:
     name: "{{ apache_packages }}"
     state: present
 
@@ -88,7 +88,7 @@
       when: php_version <= 72
 
     - name: ensure php_mod is installed
-      yum:
+      dnf:
         name: "mod_{{ php_pkg_prefix }}"
 
   when: apache_php_mod_enabled

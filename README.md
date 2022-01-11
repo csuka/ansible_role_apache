@@ -1,15 +1,6 @@
-# Ansible Role Apache 2.4
+# Apache 2.4
 
-An Ansible Role that installs Apache 2.4 on RHEL/CentOS/OL 8.
-
- * 1.0.0 initial release
- * 1.0.1 install php_mod by default, so php files are actually processed
- * 1.1.0 set php_mod as option. Include more default modules. Update readme
- * 1.1.1 set servername to supress warning during configtest
- * 1.1.2 set alias also for ssl vhost
- * 1.1.3 set httpd.conf as a template
- * 1.1.4 set comment for Listen <port> when there is no vhost defined
- * 1.1.5 improved logrotate script
+An Ansible Role that installs Apache 2.4 on EL 8.
 
 ## Good 2 know
 

@@ -1,0 +1,6 @@
+---
+skip_list:
+  - command-instead-of-shell
+  - unnamed-task
+  - risky-file-permissions
+  - no-handler
